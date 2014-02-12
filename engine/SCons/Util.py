@@ -3,7 +3,7 @@
 Various utility functions go here.
 """
 #
-# Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010 The SCons Foundation
+# Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011 The SCons Foundation
 #
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
@@ -24,7 +24,7 @@ Various utility functions go here.
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-__revision__ = "src/engine/SCons/Util.py 5023 2010/06/14 22:05:46 scons"
+__revision__ = "src/engine/SCons/Util.py 5357 2011/09/09 21:31:03 bdeegan"
 
 import os
 import sys
@@ -459,22 +459,18 @@ def _semi_deepcopy_tuple(x):
     return tuple(map(semi_deepcopy, x))
 d[tuple] = _semi_deepcopy_tuple
 
-def _semi_deepcopy_inst(x):
-    if hasattr(x, '__semi_deepcopy__'):
-        return x.__semi_deepcopy__()
-    elif isinstance(x, UserDict):
-        return x.__class__(_semi_deepcopy_dict(x))
-    elif isinstance(x, UserList):
-        return x.__class__(_semi_deepcopy_list(x))
-    else:
-        return x
-d[InstanceType] = _semi_deepcopy_inst
-
 def semi_deepcopy(x):
     copier = _semi_deepcopy_dispatch.get(type(x))
     if copier:
         return copier(x)
     else:
+        if hasattr(x, '__semi_deepcopy__') and callable(x.__semi_deepcopy__):
+            return x.__semi_deepcopy__()
+        elif isinstance(x, UserDict):
+            return x.__class__(_semi_deepcopy_dict(x))
+        elif isinstance(x, UserList):
+            return x.__class__(_semi_deepcopy_list(x))
+        
         return x
 
 

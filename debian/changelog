@@ -1,3 +1,34 @@
+scons (2.1.0-1) unstable; urgency=low
+
+  * New upstream release.
+  * debian/patches/fortran03.patch:
+    - Remove, merged upstream.
+  * debian/patches/remove_stale_files.patch:
+    - Refresh for new upstream release.
+
+ -- Luca Falavigna <dktrkranz@debian.org>  Sat, 10 Sep 2011 11:14:31 +0200
+
+scons (2.0.1-2) unstable; urgency=low
+
+  * debian/patches/parallel_build.patch:
+    - Disable parallel build on sparc machines as a workaround to weird
+      build failures seen on several packages (Closes: #632228).
+  * debian/control:
+    - Bump Standards-Version to 3.9.2, no changes required.
+
+ -- Luca Falavigna <dktrkranz@debian.org>  Sat, 02 Jul 2011 13:34:20 +0200
+
+scons (2.0.1-1) unstable; urgency=low
+
+  * New upstream release.
+  * Switch to dh_python2.
+  * debian/control:
+    - Bump Standards-Version to 3.9.1, no changes required.
+  * debian/watch:
+    - Adjust to ignore development versions.
+
+ -- Luca Falavigna <dktrkranz@debian.org>  Thu, 10 Feb 2011 23:10:48 +0100
+
 scons (2.0.0-1) unstable; urgency=low
 
   * New upstream release.

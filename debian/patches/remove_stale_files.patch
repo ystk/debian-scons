@@ -7,7 +7,7 @@ Index: b/engine/SCons/Script/Main.py
 ===================================================================
 --- a/engine/SCons/Script/Main.py	2010-01-23 15:11:19.624932557 +0100
 +++ b/engine/SCons/Script/Main.py	2010-01-23 15:11:35.084931903 +0100
-@@ -1001,6 +1001,21 @@
+@@ -1071,6 +1071,21 @@
          if not nodes:
              exit_status = 2
  
