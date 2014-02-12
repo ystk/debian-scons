@@ -5,7 +5,7 @@ This module implements the dependency scanner for Fortran code.
 """
 
 #
-# Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010 The SCons Foundation
+# Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011 The SCons Foundation
 #
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
@@ -26,7 +26,7 @@ This module implements the dependency scanner for Fortran code.
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-__revision__ = "src/engine/SCons/Scanner/Fortran.py 5023 2010/06/14 22:05:46 scons"
+__revision__ = "src/engine/SCons/Scanner/Fortran.py 5357 2011/09/09 21:31:03 bdeegan"
 
 import re
 
@@ -89,11 +89,11 @@ class F90Scanner(SCons.Scanner.Classic):
             defmodules = self.cre_def.findall(node.get_text_contents())
 
             # Remove all USE'd module names that are defined in the same file
+            # (case-insensitively)
             d = {}
             for m in defmodules:
-                d[m] = 1
-            modules = [m for m in modules if m not in d]
-            #modules = self.undefinedModules(modules, defmodules)
+                d[m.lower()] = 1
+            modules = [m for m in modules if m.lower() not in d]
 
             # Convert module name to a .mod filename
             suffix = env.subst('$FORTRANMODSUFFIX')

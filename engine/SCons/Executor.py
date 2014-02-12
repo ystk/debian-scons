@@ -6,7 +6,7 @@ Nodes.
 """
 
 #
-# Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010 The SCons Foundation
+# Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011 The SCons Foundation
 #
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
@@ -27,7 +27,7 @@ Nodes.
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-__revision__ = "src/engine/SCons/Executor.py 5023 2010/06/14 22:05:46 scons"
+__revision__ = "src/engine/SCons/Executor.py 5357 2011/09/09 21:31:03 bdeegan"
 
 import collections
 
@@ -596,7 +596,7 @@ class Null(object):
     def get_all_sources(self):
         return self.batches[0].targets[0].sources
     def get_all_children(self):
-        return self.get_all_sources()
+        return self.batches[0].targets[0].children()
     def get_all_prerequisites(self):
         return []
     def get_action_side_effects(self):

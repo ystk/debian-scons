@@ -5,7 +5,7 @@ This module implements the dependency scanner for LaTeX code.
 """
 
 #
-# Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010 The SCons Foundation
+# Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011 The SCons Foundation
 #
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
@@ -27,7 +27,7 @@ This module implements the dependency scanner for LaTeX code.
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
 
-__revision__ = "src/engine/SCons/Scanner/LaTeX.py 5023 2010/06/14 22:05:46 scons"
+__revision__ = "src/engine/SCons/Scanner/LaTeX.py 5357 2011/09/09 21:31:03 bdeegan"
 
 import os.path
 import re
@@ -148,6 +148,8 @@ class LaTeX(SCons.Scanner.Base):
     env['TEXINPUTS'] for "lstinputlisting" keyword
     env['BIBINPUTS'] for "bibliography" keyword
     env['BSTINPUTS'] for "bibliographystyle" keyword
+    env['INDEXSTYLE'] for "makeindex" keyword, no scanning support needed
+                      just allows user to set it if needed.
 
     FIXME: also look for the class or style in document[class|style]{}
     FIXME: also look for the argument of bibliographystyle{}
@@ -157,6 +159,7 @@ class LaTeX(SCons.Scanner.Base):
                      'includegraphics': 'TEXINPUTS',
                      'bibliography': 'BIBINPUTS',
                      'bibliographystyle': 'BSTINPUTS',
+                     'makeindex': 'INDEXSTYLE',
                      'usepackage': 'TEXINPUTS',
                      'lstinputlisting': 'TEXINPUTS'}
     env_variables = SCons.Util.unique(list(keyword_paths.values()))
@@ -168,8 +171,11 @@ class LaTeX(SCons.Scanner.Base):
         # Without the \n,  the ^ could match the beginning of a *previous*
         # line followed by one or more newline characters (i.e. blank
         # lines), interfering with a match on the next line.
-        regex = r'^[^%\n]*\\(include|includegraphics(?:\[[^\]]+\])?|lstinputlisting(?:\[[^\]]+\])?|input|bibliography|usepackage){([^}]*)}'
+        # add option for whitespace before the '[options]' or the '{filename}'
+        regex = r'^[^%\n]*\\(include|includegraphics(?:\s*\[[^\]]+\])?|lstinputlisting(?:\[[^\]]+\])?|input|bibliography|usepackage)\s*{([^}]*)}'
         self.cre = re.compile(regex, re.M)
+        self.comment_re = re.compile(r'^((?:(?:\\%)|[^%\n])*)(.*)$', re.M)
+
         self.graphics_extensions = graphics_extensions
 
         def _scan(node, env, path=(), self=self):
@@ -274,6 +280,23 @@ class LaTeX(SCons.Scanner.Base):
                 return i, include
         return i, include
 
+    def canonical_text(self, text):
+        """Standardize an input TeX-file contents.
+
+        Currently:
+          * removes comments, unwrapping comment-wrapped lines.
+        """
+        out = []
+        line_continues_a_comment = False
+        for line in text.splitlines():
+            line,comment = self.comment_re.findall(line)[0]
+            if line_continues_a_comment == True:
+                out[-1] = out[-1] + line.lstrip()
+            else:
+                out.append(line)
+            line_continues_a_comment = len(comment) > 0
+        return '\n'.join(out).rstrip()+'\n'
+
     def scan(self, node):
         # Modify the default scan function to allow for the regular
         # expression to return a comma separated list of file names
@@ -281,11 +304,13 @@ class LaTeX(SCons.Scanner.Base):
 
         # Cache the includes list in node so we only scan it once:
         # path_dict = dict(list(path))
-        noopt_cre = re.compile('\[.*$')
+        # add option for whitespace (\s) before the '['
+        noopt_cre = re.compile('\s*\[.*$')
         if node.includes != None:
             includes = node.includes
         else:
-            includes = self.cre.findall(node.get_text_contents())
+            text = self.canonical_text(node.get_text_contents())
+            includes = self.cre.findall(text)
             # 1. Split comma-separated lines, e.g.
             #      ('bibliography', 'phys,comp')
             #    should become two entries
