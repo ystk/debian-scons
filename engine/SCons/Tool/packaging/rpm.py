@@ -4,7 +4,7 @@ The rpm packager.
 """
 
 #
-# Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011 The SCons Foundation
+# Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014 The SCons Foundation
 #
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
@@ -25,11 +25,12 @@ The rpm packager.
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-__revision__ = "src/engine/SCons/Tool/packaging/rpm.py 5357 2011/09/09 21:31:03 bdeegan"
+__revision__ = "src/engine/SCons/Tool/packaging/rpm.py  2014/03/02 14:18:15 garyo"
 
 import os
 
 import SCons.Builder
+import SCons.Tool.rpmutils
 
 from SCons.Environment import OverrideEnvironment
 from SCons.Tool.packaging import stripinstallbuilder, src_targz
@@ -52,16 +53,7 @@ def package(env, target, source, PACKAGEROOT, NAME, VERSION,
     else:
         # This should be overridable from the construction environment,
         # which it is by using ARCHITECTURE=.
-        # Guessing based on what os.uname() returns at least allows it
-        # to work for both i386 and x86_64 Linux systems.
-        archmap = {
-            'i686'  : 'i386',
-            'i586'  : 'i386',
-            'i486'  : 'i386',
-        }
-
-        buildarchitecture = os.uname()[4]
-        buildarchitecture = archmap.get(buildarchitecture, buildarchitecture)
+        buildarchitecture = SCons.Tool.rpmutils.defaultMachine()
 
         if 'ARCHITECTURE' in kw:
             buildarchitecture = kw['ARCHITECTURE']

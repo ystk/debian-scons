@@ -1,3 +1,51 @@
+scons (2.3.1-1) unstable; urgency=medium
+
+  * New upstream release.
+  * debian/patches/remove_stale_files.patch:
+    - Refresh for new upstream release.
+  * debian/patches/manpages.patch:
+    - Restore man pages from version 2.3.0, otherwise empty.
+  * debian/control:
+    - Bump Standards-Version to 3.9.5, no changes required.
+
+ -- Luca Falavigna <dktrkranz@debian.org>  Sat, 26 Apr 2014 12:22:43 +0200
+
+scons (2.3.0-2) unstable; urgency=low
+
+  * Upload to unstable.
+  * debian/patches/java_ignore_nonexistent_files.patch:
+    - Do not check for symlink reference, check whether files can be
+      opened instead, and return a valid tuple anyway (LP: #1101094).
+  * debian/patches/manpages.patch:
+    - Fix spelling errors in the man pages.
+  * debian/control:
+    - Move VCS repository under collab-maint.
+
+ -- Luca Falavigna <dktrkranz@debian.org>  Sun, 05 May 2013 11:42:32 +0200
+
+scons (2.3.0-1) experimental; urgency=low
+
+  * New upstream release.
+  * debian/patches/remove_stale_files.patch:
+    - Refresh for new upstream release.
+  * debian/control:
+    - Bump Standards-Version to 3.9.4, no changes required.
+
+ -- Luca Falavigna <dktrkranz@debian.org>  Mon, 11 Mar 2013 22:30:58 +0100
+
+scons (2.2.0-1) experimental; urgency=low
+
+  * New upstream release.
+    - New documentation for custom Decider functions (Closes: #579337).
+  * debian/patches/remove_stale_files.patch:
+    - Refresh for new upstream release.
+  * debian/compat:
+    - Bump compatibility level to 9.
+  * debian/control:
+    - Bump Standards-Version to 3.9.3, no changes required.
+
+ -- Luca Falavigna <dktrkranz@debian.org>  Mon, 20 Aug 2012 23:26:43 +0200
+
 scons (2.1.0-1) unstable; urgency=low
 
   * New upstream release.

@@ -10,7 +10,7 @@ selection method.
 """
 
 #
-# Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011 The SCons Foundation
+# Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014 The SCons Foundation
 #
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
@@ -32,7 +32,7 @@ selection method.
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
 
-__revision__ = "src/engine/SCons/Tool/tex.py 5357 2011/09/09 21:31:03 bdeegan"
+__revision__ = "src/engine/SCons/Tool/tex.py  2014/03/02 14:18:15 garyo"
 
 import os.path
 import re
@@ -55,14 +55,18 @@ must_rerun_latex = True
 check_suffixes = ['.toc', '.lof', '.lot', '.out', '.nav', '.snm']
 
 # these are files that require bibtex or makeindex to be run when they change
-all_suffixes = check_suffixes + ['.bbl', '.idx', '.nlo', '.glo', '.acn']
+all_suffixes = check_suffixes + ['.bbl', '.idx', '.nlo', '.glo', '.acn', '.bcf']
 
 #
 # regular expressions used to search for Latex features
 # or outputs that require rerunning latex
 #
 # search for all .aux files opened by latex (recorded in the .fls file)
-openout_aux_re = re.compile(r"INPUT *(.*\.aux)")
+openout_aux_re = re.compile(r"OUTPUT *(.*\.aux)")
+
+# search for all .bcf files opened by latex (recorded in the .fls file)
+# for use by biber
+openout_bcf_re = re.compile(r"OUTPUT *(.*\.bcf)")
 
 #printindex_re = re.compile(r"^[^%]*\\printindex", re.MULTILINE)
 #printnomenclature_re = re.compile(r"^[^%]*\\printnomenclature", re.MULTILINE)
@@ -86,6 +90,8 @@ tableofcontents_re = re.compile(r"^[^%\n]*\\tableofcontents", re.MULTILINE)
 makeindex_re = re.compile(r"^[^%\n]*\\makeindex", re.MULTILINE)
 bibliography_re = re.compile(r"^[^%\n]*\\bibliography", re.MULTILINE)
 bibunit_re = re.compile(r"^[^%\n]*\\begin\{bibunit\}", re.MULTILINE)
+multibib_re = re.compile(r"^[^%\n]*\\newcites\{([^\}]*)\}", re.MULTILINE)
+addbibresource_re = re.compile(r"^[^%\n]*\\(addbibresource|addglobalbib|addsectionbib)", re.MULTILINE)
 listoffigures_re = re.compile(r"^[^%\n]*\\listoffigures", re.MULTILINE)
 listoftables_re = re.compile(r"^[^%\n]*\\listoftables", re.MULTILINE)
 hyperref_re = re.compile(r"^[^%\n]*\\usepackage.*\{hyperref\}", re.MULTILINE)
@@ -94,6 +100,10 @@ makeglossary_re = re.compile(r"^[^%\n]*\\makeglossary", re.MULTILINE)
 makeglossaries_re = re.compile(r"^[^%\n]*\\makeglossaries", re.MULTILINE)
 makeacronyms_re = re.compile(r"^[^%\n]*\\makeglossaries", re.MULTILINE)
 beamer_re = re.compile(r"^[^%\n]*\\documentclass\{beamer\}", re.MULTILINE)
+regex = r'^[^%\n]*\\newglossary\s*\[([^\]]+)\]?\s*\{([^}]*)\}\s*\{([^}]*)\}\s*\{([^}]*)\}\s*\{([^}]*)\}'
+newglossary_re = re.compile(regex, re.MULTILINE)
+
+newglossary_suffix = []
 
 # search to find all files included by Latex
 include_re = re.compile(r'^[^%\n]*\\(?:include|input){([^}]*)}', re.MULTILINE)
@@ -119,6 +129,9 @@ LaTeXAction = None
 # An action to run BibTeX on a file.
 BibTeXAction = None
 
+# An action to run Biber on a file.
+BiberAction = None
+
 # An action to run MakeIndex on a file.
 MakeIndexAction = None
 
@@ -130,6 +143,9 @@ MakeGlossaryAction = None
 
 # An action to run MakeIndex (for acronyms) on a file.
 MakeAcronymsAction = None
+
+# An action to run MakeIndex (for newglossary commands) on a file.
+MakeNewGlossaryAction = None
 
 # Used as a return value of modify_env_var if the variable is not set.
 _null = SCons.Scanner.LaTeX._null
@@ -226,7 +242,8 @@ def InternalLaTeXAuxAction(XXXLaTeXAction, target = None, source= None, env=None
     saved_hashes = {}
     suffix_nodes = {}
 
-    for suffix in all_suffixes:
+
+    for suffix in all_suffixes+sum(newglossary_suffix, []):
         theNode = env.fs.File(targetbase + suffix)
         suffix_nodes[suffix] = theNode
         saved_hashes[suffix] = theNode.get_csig()
@@ -235,6 +252,9 @@ def InternalLaTeXAuxAction(XXXLaTeXAction, target = None, source= None, env=None
         print "hashes: ",saved_hashes
 
     must_rerun_latex = True
+
+    # .aux files already processed by BibTex
+    already_bibtexed = []
 
     #
     # routine to update MD5 hash and compare
@@ -291,27 +311,63 @@ def InternalLaTeXAuxAction(XXXLaTeXAction, target = None, source= None, env=None
                 dups[x] = 1
             auxfiles = list(dups.keys())
 
+        bcffiles = []
+        if os.path.isfile(flsfilename):
+            flsContent = open(flsfilename, "rb").read()
+            bcffiles = openout_bcf_re.findall(flsContent)
+            # remove duplicates
+            dups = {}
+            for x in bcffiles:
+                dups[x] = 1
+            bcffiles = list(dups.keys())
+
         if Verbose:
             print "auxfiles ",auxfiles
+            print "bcffiles ",bcffiles
 
         # Now decide if bibtex will need to be run.
         # The information that bibtex reads from the .aux file is
         # pass-independent. If we find (below) that the .bbl file is unchanged,
         # then the last latex saw a correct bibliography.
-        # Therefore only do this on the first pass
-        if count == 1:
-            for auxfilename in auxfiles:
+        # Therefore only do this once
+        # Go through all .aux files and remember the files already done.
+        for auxfilename in auxfiles:
+            if auxfilename not in already_bibtexed:
+                already_bibtexed.append(auxfilename)
                 target_aux = os.path.join(targetdir, auxfilename)
                 if os.path.isfile(target_aux):
                     content = open(target_aux, "rb").read()
                     if content.find("bibdata") != -1:
                         if Verbose:
-                            print "Need to run bibtex"
+                            print "Need to run bibtex on ",auxfilename
                         bibfile = env.fs.File(SCons.Util.splitext(target_aux)[0])
                         result = BibTeXAction(bibfile, bibfile, env)
                         if result != 0:
                             check_file_error_message(env['BIBTEX'], 'blg')
-                        must_rerun_latex = must_rerun_latex or check_MD5(suffix_nodes['.bbl'],'.bbl')
+                        must_rerun_latex = True
+
+        # Now decide if biber will need to be run.
+        # When the backend for biblatex is biber (by choice or default) the
+        # citation information is put in the .bcf file.
+        # The information that biber reads from the .bcf file is
+        # pass-independent. If we find (below) that the .bbl file is unchanged,
+        # then the last latex saw a correct bibliography.
+        # Therefore only do this once
+        # Go through all .bcf files and remember the files already done.
+        for bcffilename in bcffiles:
+            if bcffilename not in already_bibtexed:
+                already_bibtexed.append(bcffilename)
+                target_bcf = os.path.join(targetdir, bcffilename)
+                if os.path.isfile(target_bcf):
+                    content = open(target_bcf, "rb").read()
+                    if content.find("bibdata") != -1:
+                        if Verbose:
+                            print "Need to run biber on ",bcffilename
+                        bibfile = env.fs.File(SCons.Util.splitext(target_bcf)[0])
+                        result = BiberAction(bibfile, bibfile, env)
+                        if result != 0:
+                            check_file_error_message(env['BIBER'], 'blg')
+                        must_rerun_latex = True
 
         # Now decide if latex will need to be run again due to index.
         if check_MD5(suffix_nodes['.idx'],'.idx') or (count == 1 and run_makeindex):
@@ -366,6 +422,21 @@ def InternalLaTeXAuxAction(XXXLaTeXAction, target = None, source= None, env=None
                 check_file_error_message('%s (acronyms)' % env['MAKEACRONYMS'],
                                          'alg')
                 return result
+
+        # Now decide if latex will need to be run again due to newglossary command.
+        for ig in range(len(newglossary_suffix)):
+            if check_MD5(suffix_nodes[newglossary_suffix[ig][2]],newglossary_suffix[ig][2]) or (count == 1):
+                # We must run makeindex
+                if Verbose:
+                    print "Need to run makeindex for newglossary"
+                newglfile = suffix_nodes[newglossary_suffix[ig][2]]
+                MakeNewGlossaryAction = SCons.Action.Action("$MAKENEWGLOSSARY ${SOURCE.filebase}%s -s ${SOURCE.filebase}.ist -t ${SOURCE.filebase}%s -o ${SOURCE.filebase}%s" % (newglossary_suffix[ig][2],newglossary_suffix[ig][0],newglossary_suffix[ig][1]), "$MAKENEWGLOSSARYCOMSTR")
+
+                result = MakeNewGlossaryAction(newglfile, newglfile, env)
+                if result != 0:
+                    check_file_error_message('%s (newglossary)' % env['MAKENEWGLOSSARY'],
+                                             newglossary_suffix[ig][0])
+                    return result
 
         # Now decide if latex needs to be run yet again to resolve warnings.
         if warning_rerun_re.search(logContent):
@@ -552,7 +623,23 @@ def ScanFiles(theFile, target, paths, file_tests, file_tests_search, env, graphi
 
     for i in range(len(file_tests_search)):
         if file_tests[i][0] is None:
+            if Verbose:
+                print "scan i ",i," files_tests[i] ",file_tests[i], file_tests[i][1]
             file_tests[i][0] = file_tests_search[i].search(content)
+            if Verbose and file_tests[i][0]:
+                print "   found match for ",file_tests[i][1][-1]
+            # for newglossary insert the suffixes in file_tests[i]
+            if file_tests[i][0] and file_tests[i][1][-1] == 'newglossary':
+                findresult = file_tests_search[i].findall(content)
+                for l in range(len(findresult)) :
+                    (file_tests[i][1]).insert(0,'.'+findresult[l][3])
+                    (file_tests[i][1]).insert(0,'.'+findresult[l][2])
+                    (file_tests[i][1]).insert(0,'.'+findresult[l][0])
+                    suffix_list = ['.'+findresult[l][0],'.'+findresult[l][2],'.'+findresult[l][3] ]
+                    newglossary_suffix.append(suffix_list)
+                if Verbose:
+                    print " new suffixes for newglossary ",newglossary_suffix
+                
 
     incResult = includeOnly_re.search(content)
     if incResult:
@@ -621,6 +708,8 @@ def tex_emitter_core(target, source, env, graphics_extensions):
                          makeindex_re,
                          bibliography_re,
                          bibunit_re,
+                         multibib_re,
+                         addbibresource_re,
                          tableofcontents_re,
                          listoffigures_re,
                          listoftables_re,
@@ -629,13 +718,16 @@ def tex_emitter_core(target, source, env, graphics_extensions):
                          makeglossary_re,
                          makeglossaries_re,
                          makeacronyms_re,
-                         beamer_re ]
+                         beamer_re,
+                         newglossary_re ]
     # set up list with the file suffixes that need emitting
     # when a feature is found
     file_tests_suff = [['.aux','aux_file'],
                   ['.idx', '.ind', '.ilg','makeindex'],
                   ['.bbl', '.blg','bibliography'],
                   ['.bbl', '.blg','bibunit'],
+                  ['.bbl', '.blg','multibib'],
+                  ['.bbl', '.blg','.bcf','addbibresource'],
                   ['.toc','contents'],
                   ['.lof','figures'],
                   ['.lot','tables'],
@@ -644,7 +736,9 @@ def tex_emitter_core(target, source, env, graphics_extensions):
                   ['.glo', '.gls', '.glg','glossary'],
                   ['.glo', '.gls', '.glg','glossaries'],
                   ['.acn', '.acr', '.alg','acronyms'],
-                  ['.nav', '.snm', '.out', '.toc','beamer'] ]
+                  ['.nav', '.snm', '.out', '.toc','beamer'],
+                  ['newglossary',] ]
+    # for newglossary the suffixes are added as we find the command
     # build the list of lists
     file_tests = []
     for i in range(len(file_tests_search)):
@@ -673,11 +767,14 @@ def tex_emitter_core(target, source, env, graphics_extensions):
     if Verbose:
         print "search path ",paths
 
+    # scan all sources for side effect files
     aux_files = []
     file_tests = ScanFiles(source[0], target, paths, file_tests, file_tests_search, env, graphics_extensions, targetdir, aux_files)
 
     for (theSearch,suffix_list) in file_tests:
         # add side effects if feature is present.If file is to be generated,add all side effects
+        if Verbose and theSearch:
+            print "check side effects for ",suffix_list[-1]
         if (theSearch != None) or (not source[0].exists() ):
             file_list = [targetbase,]
             # for bibunit we need a list of files
@@ -686,20 +783,31 @@ def tex_emitter_core(target, source, env, graphics_extensions):
                 file_list = glob.glob(file_basename)
                 # remove the suffix '.aux'
                 for i in range(len(file_list)):
-                    file_list[i] = SCons.Util.splitext(file_list[i])[0]
+                    file_list.append(SCons.Util.splitext(file_list[i])[0])
+            # for multibib we need a list of files
+            if suffix_list[-1] == 'multibib':
+                for multibibmatch in multibib_re.finditer(content):
+                    if Verbose:
+                        print "multibib match ",multibibmatch.group(1)
+                    if multibibmatch != None:
+                        baselist = multibibmatch.group(1).split(',')
+                        if Verbose:
+                            print "multibib list ", baselist
+                        for i in range(len(baselist)):
+                            file_list.append(os.path.join(targetdir, baselist[i]))
             # now define the side effects
             for file_name in file_list:
                 for suffix in suffix_list[:-1]:
                     env.SideEffect(file_name + suffix,target[0])
                     if Verbose:
-                        print "side effect :",file_name + suffix
+                        print "side effect tst :",file_name + suffix, " target is ",str(target[0])
                     env.Clean(target[0],file_name + suffix)
 
     for aFile in aux_files:
         aFile_base = SCons.Util.splitext(aFile)[0]
         env.SideEffect(aFile_base + '.aux',target[0])
         if Verbose:
-            print "side effect :",aFile_base + '.aux'
+            print "side effect aux :",aFile_base + '.aux'
         env.Clean(target[0],aFile_base + '.aux')
     # read fls file to get all other files that latex creates and will read on the next pass
     # remove files from list that we explicitly dealt with above
@@ -712,7 +820,7 @@ def tex_emitter_core(target, source, env, graphics_extensions):
                 out_files.remove(filename)
         env.SideEffect(out_files,target[0])
         if Verbose:
-            print "side effect :",out_files
+            print "side effect fls :",out_files
         env.Clean(target[0],out_files)
 
     return (target, source)
@@ -777,6 +885,11 @@ def generate_common(env):
     if BibTeXAction is None:
         BibTeXAction = SCons.Action.Action("$BIBTEXCOM", "$BIBTEXCOMSTR")
 
+    # Define an action to run Biber on a file.
+    global BiberAction
+    if BiberAction is None:
+        BiberAction = SCons.Action.Action("$BIBERCOM", "$BIBERCOMSTR")
+
     # Define an action to run MakeIndex on a file.
     global MakeIndexAction
     if MakeIndexAction is None:
@@ -826,7 +939,7 @@ def generate_common(env):
     env['LATEX']        = 'latex'
     env['LATEXFLAGS']   = SCons.Util.CLVar('-interaction=nonstopmode -recorder')
     env['LATEXCOM']     = CDCOM + '${TARGET.dir} && $LATEX $LATEXFLAGS ${SOURCE.file}'
-    env['LATEXRETRIES'] = 3
+    env['LATEXRETRIES'] = 4
 
     env['PDFLATEX']      = 'pdflatex'
     env['PDFLATEXFLAGS'] = SCons.Util.CLVar('-interaction=nonstopmode -recorder')
@@ -835,6 +948,10 @@ def generate_common(env):
     env['BIBTEX']      = 'bibtex'
     env['BIBTEXFLAGS'] = SCons.Util.CLVar('')
     env['BIBTEXCOM']   = CDCOM + '${TARGET.dir} && $BIBTEX $BIBTEXFLAGS ${SOURCE.filebase}'
+
+    env['BIBER']      = 'biber'
+    env['BIBERFLAGS'] = SCons.Util.CLVar('')
+    env['BIBERCOM']   = CDCOM + '${TARGET.dir} && $BIBER $BIBERFLAGS ${SOURCE.filebase}'
 
     env['MAKEINDEX']      = 'makeindex'
     env['MAKEINDEXFLAGS'] = SCons.Util.CLVar('')
@@ -854,6 +971,9 @@ def generate_common(env):
     env['MAKENCLSTYLE'] = 'nomencl.ist'
     env['MAKENCLFLAGS'] = '-s ${MAKENCLSTYLE} -t ${SOURCE.filebase}.nlg'
     env['MAKENCLCOM']   = CDCOM + '${TARGET.dir} && $MAKENCL ${SOURCE.filebase}.nlo $MAKENCLFLAGS -o ${SOURCE.filebase}.nls'
+
+    env['MAKENEWGLOSSARY']      = 'makeindex'
+    env['MAKENEWGLOSSARYCOM']   = CDCOM + '${TARGET.dir} && $MAKENEWGLOSSARY '
 
 def exists(env):
     generate_darwin(env)

@@ -9,7 +9,7 @@ selection method.
 """
 
 #
-# Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011 The SCons Foundation
+# Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014 The SCons Foundation
 #
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
@@ -31,7 +31,7 @@ selection method.
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
 
-__revision__ = "src/engine/SCons/Tool/mslink.py 5357 2011/09/09 21:31:03 bdeegan"
+__revision__ = "src/engine/SCons/Tool/mslink.py  2014/03/02 14:18:15 garyo"
 
 import os.path
 
@@ -159,6 +159,7 @@ def prog_emitter(target, source, env):
     SCons.Tool.msvc.validate_vars(env)
 
     extratargets = []
+    extrasources = []
 
     exe = env.FindIxes(target, "PROGPREFIX", "PROGSUFFIX")
     if not exe:
@@ -178,7 +179,15 @@ def prog_emitter(target, source, env):
         extratargets.append(pdb)
         target[0].attributes.pdb = pdb
 
-    return (target+extratargets,source)
+    if version_num >= 11.0 and env.get('PCH', 0):
+        # MSVC 11 and above need the PCH object file to be added to the link line,
+        # otherwise you get link error LNK2011.
+        pchobj = SCons.Util.splitext(str(env['PCH']))[0] + '.obj'
+        # print "prog_emitter, version %s, appending pchobj %s"%(version_num, pchobj)
+        if pchobj not in extrasources:
+            extrasources.append(pchobj)
+
+    return (target+extratargets,source+extrasources)
 
 def RegServerFunc(target, source, env):
     if 'register' in env and env['register']:
@@ -228,11 +237,11 @@ embedManifestExeCheckAction = SCons.Action.Action(embedManifestExeCheck, None)
 
 regServerAction = SCons.Action.Action("$REGSVRCOM", "$REGSVRCOMSTR")
 regServerCheck = SCons.Action.Action(RegServerFunc, None)
-shlibLinkAction = SCons.Action.Action('${TEMPFILE("$SHLINK $SHLINKFLAGS $_SHLINK_TARGETS $_LIBDIRFLAGS $_LIBFLAGS $_PDB $_SHLINK_SOURCES")}')
+shlibLinkAction = SCons.Action.Action('${TEMPFILE("$SHLINK $SHLINKFLAGS $_SHLINK_TARGETS $_LIBDIRFLAGS $_LIBFLAGS $_PDB $_SHLINK_SOURCES")}', '$SHLINKCOMSTR')
 compositeShLinkAction = shlibLinkAction + regServerCheck + embedManifestDllCheckAction
-ldmodLinkAction = SCons.Action.Action('${TEMPFILE("$LDMODULE $LDMODULEFLAGS $_LDMODULE_TARGETS $_LIBDIRFLAGS $_LIBFLAGS $_PDB $_LDMODULE_SOURCES")}')
+ldmodLinkAction = SCons.Action.Action('${TEMPFILE("$LDMODULE $LDMODULEFLAGS $_LDMODULE_TARGETS $_LIBDIRFLAGS $_LIBFLAGS $_PDB $_LDMODULE_SOURCES")}', '$LDMODULECOMSTR')
 compositeLdmodAction = ldmodLinkAction + regServerCheck + embedManifestDllCheckAction
-exeLinkAction = SCons.Action.Action('${TEMPFILE("$LINK $LINKFLAGS /OUT:$TARGET.windows $_LIBDIRFLAGS $_LIBFLAGS $_PDB $SOURCES.windows")}')
+exeLinkAction = SCons.Action.Action('${TEMPFILE("$LINK $LINKFLAGS /OUT:$TARGET.windows $_LIBDIRFLAGS $_LIBFLAGS $_PDB $SOURCES.windows")}', '$LINKCOMSTR')
 compositeLinkAction = exeLinkAction + embedManifestExeCheckAction
 
 def generate(env):

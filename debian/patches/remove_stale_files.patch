@@ -7,8 +7,8 @@ Index: b/engine/SCons/Script/Main.py
 ===================================================================
 --- a/engine/SCons/Script/Main.py	2010-01-23 15:11:19.624932557 +0100
 +++ b/engine/SCons/Script/Main.py	2010-01-23 15:11:35.084931903 +0100
-@@ -1071,6 +1071,21 @@
-         if not nodes:
+@@ -1087,6 +1087,21 @@
+             print 'Found nothing to build'
              exit_status = 2
  
 +        # Remove temporary files left by SCons

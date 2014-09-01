@@ -9,7 +9,7 @@ selection method.
 """
 
 #
-# Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011 The SCons Foundation
+# Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014 The SCons Foundation
 #
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
@@ -30,7 +30,7 @@ selection method.
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-__revision__ = "src/engine/SCons/Tool/msvs.py 5357 2011/09/09 21:31:03 bdeegan"
+__revision__ = "src/engine/SCons/Tool/msvs.py  2014/03/02 14:18:15 garyo"
 
 import SCons.compat
 
@@ -786,19 +786,15 @@ class _GenerateV7DSP(_DSPGenerator):
 
             # First remove any common prefix
             commonprefix = None
-            if len(sources) > 1:
-                s = list(map(os.path.normpath, sources))
-                # take the dirname because the prefix may include parts
-                # of the filenames (e.g. if you have 'dir\abcd' and
-                # 'dir\acde' then the cp will be 'dir\a' )
-                cp = os.path.dirname( os.path.commonprefix(s) )
-                if cp and s[0][len(cp)] == os.sep:
-                    # +1 because the filename starts after the separator
-                    sources = [s[len(cp)+1:] for s in sources]
-                    commonprefix = cp
-            elif len(sources) == 1:
-                commonprefix = os.path.dirname( sources[0] )
-                sources[0] = os.path.basename( sources[0] )
+            s = list(map(os.path.normpath, sources))
+            # take the dirname because the prefix may include parts
+            # of the filenames (e.g. if you have 'dir\abcd' and
+            # 'dir\acde' then the cp will be 'dir\a' )
+            cp = os.path.dirname( os.path.commonprefix(s) )
+            if cp and s[0][len(cp)] == os.sep:
+                # +1 because the filename starts after the separator
+                sources = [s[len(cp)+1:] for s in sources]
+                commonprefix = cp
 
             hierarchy = makeHierarchy(sources)
             self.printSources(hierarchy, commonprefix=commonprefix)
@@ -1116,19 +1112,15 @@ class _GenerateV10DSP(_DSPGenerator):
             # First remove any common prefix
             sources = self.sources[kind]
             commonprefix = None
-            if len(sources) > 1:
-                s = list(map(os.path.normpath, sources))
-                # take the dirname because the prefix may include parts
-                # of the filenames (e.g. if you have 'dir\abcd' and
-                # 'dir\acde' then the cp will be 'dir\a' )
-                cp = os.path.dirname( os.path.commonprefix(s) )
-                if cp and s[0][len(cp)] == os.sep:
-                    # +1 because the filename starts after the separator
-                    sources = [s[len(cp)+1:] for s in sources]
-                    commonprefix = cp
-            elif len(sources) == 1:
-                commonprefix = os.path.dirname( sources[0] )
-                sources[0] = os.path.basename( sources[0] )
+            s = list(map(os.path.normpath, sources))
+            # take the dirname because the prefix may include parts
+            # of the filenames (e.g. if you have 'dir\abcd' and
+            # 'dir\acde' then the cp will be 'dir\a' )
+            cp = os.path.dirname( os.path.commonprefix(s) )
+            if cp and s[0][len(cp)] == os.sep:
+                # +1 because the filename starts after the separator
+                sources = [s[len(cp)+1:] for s in sources]
+                commonprefix = cp
             
             hierarchy = makeHierarchy(sources)
             self.printFilters(hierarchy, kind)
@@ -1143,19 +1135,15 @@ class _GenerateV10DSP(_DSPGenerator):
             # First remove any common prefix
             sources = self.sources[kind]
             commonprefix = None
-            if len(sources) > 1:
-                s = list(map(os.path.normpath, sources))
-                # take the dirname because the prefix may include parts
-                # of the filenames (e.g. if you have 'dir\abcd' and
-                # 'dir\acde' then the cp will be 'dir\a' )
-                cp = os.path.dirname( os.path.commonprefix(s) )
-                if cp and s[0][len(cp)] == os.sep:
-                    # +1 because the filename starts after the separator
-                    sources = [s[len(cp)+1:] for s in sources]
-                    commonprefix = cp
-            elif len(sources) == 1:
-                commonprefix = os.path.dirname( sources[0] )
-                sources[0] = os.path.basename( sources[0] )
+            s = list(map(os.path.normpath, sources))
+            # take the dirname because the prefix may include parts
+            # of the filenames (e.g. if you have 'dir\abcd' and
+            # 'dir\acde' then the cp will be 'dir\a' )
+            cp = os.path.dirname( os.path.commonprefix(s) )
+            if cp and s[0][len(cp)] == os.sep:
+                # +1 because the filename starts after the separator
+                sources = [s[len(cp)+1:] for s in sources]
+                commonprefix = cp
             
             hierarchy = makeHierarchy(sources)
             self.printSources(hierarchy, kind, commonprefix, kind)
@@ -1217,7 +1205,9 @@ class _GenerateV7DSW(_DSWGenerator):
         self.version = self.env['MSVS_VERSION']
         self.version_num, self.suite = msvs_parse_version(self.version)
         self.versionstr = '7.00'
-        if self.version_num >= 10.0:
+        if self.version_num >= 11.0:
+            self.versionstr = '12.00'
+        elif self.version_num >= 10.0:
             self.versionstr = '11.00'
         elif self.version_num >= 9.0:
             self.versionstr = '10.00'
@@ -1320,13 +1310,16 @@ class _GenerateV7DSW(_DSWGenerator):
 
     def PrintSolution(self):
         """Writes a solution file"""
-        self.file.write('Microsoft Visual Studio Solution File, Format Version %s\n' % self.versionstr )
-        if self.version_num >= 10.0:
+        self.file.write('Microsoft Visual Studio Solution File, Format Version %s\n' % self.versionstr)
+        if self.version_num >= 11.0:
+            self.file.write('# Visual Studio 11\n')
+        elif self.version_num >= 10.0:
             self.file.write('# Visual Studio 2010\n')
         elif self.version_num >= 9.0:
             self.file.write('# Visual Studio 2008\n')
         elif self.version_num >= 8.0:
             self.file.write('# Visual Studio 2005\n')
+            
         for dspinfo in self.dspfiles_info:
             name = dspinfo['NAME']
             base, suffix = SCons.Util.splitext(name)
@@ -1660,6 +1653,10 @@ def projectEmitter(target, source, env):
         env['projects'] = [env.File(t).srcnode() for t in targetlist]
         t, s = solutionEmitter(target, target, env)
         targetlist = targetlist + t
+
+    # Beginning with Visual Studio 2010 for each project file (.vcxproj) we have additional file (.vcxproj.filters)
+    if float(env['MSVS_VERSION']) >= 10.0:
+        targetlist.append(targetlist[0] + '.filters')
 
     return (targetlist, sourcelist)
 

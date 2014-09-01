@@ -3,12 +3,12 @@ Section: devel
 Priority: optional
 Maintainer: Luca Falavigna <dktrkranz@debian.org>
 Uploaders: Mark Brown <broonie@debian.org>
-Build-Depends: debhelper (>= 7.2.18), python (>= 2.6.6-3~)
-Standards-Version: 3.9.2
+Build-Depends: debhelper (>= 9), python (>= 2.6.6-3~)
+Standards-Version: 3.9.5
 X-Python-Version: >= 2.4
 Homepage: http://www.scons.org/
-Vcs-Git: git://git.debian.org/git/users/dktrkranz/scons.git
-Vcs-Browser: http://git.debian.org/?p=users/dktrkranz/scons.git;a=summary
+Vcs-Git: git://anonscm.debian.org/collab-maint/scons.git
+Vcs-Browser: http://anonscm.debian.org/gitweb/?p=collab-maint/scons.git;a=summary
 
 Package: scons
 Architecture: all

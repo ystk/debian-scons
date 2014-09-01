@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011 The SCons Foundation
+# Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014 The SCons Foundation
 #
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
@@ -32,19 +32,27 @@ NOTE: Installed SCons is not importable like usual Python packages. It is
       below is dedicated to make it happen on various platforms.
 """
 
-__revision__ = "src/setup.py 5357 2011/09/09 21:31:03 bdeegan"
+__revision__ = "src/setup.py  2014/03/02 14:18:15 garyo"
 
 import os
 import stat
 import sys
 
-Version = "2.1.0"
+Version = "2.3.1"
 
 man_pages = [
     'scons.1',
     'sconsign.1',
     'scons-time.1',
 ]
+
+# Exit with error if trying to install with Python >= 3.0
+if sys.version_info >= (3,0,0):
+    msg = "scons: *** SCons does not run under Python version %s.\n\
+Python 3 and above are not yet supported.\n"
+    sys.stderr.write(msg % (sys.version.split()[0]))
+    sys.exit(1)
+
 
 # change to setup.py directory if it was executed from other dir
 (head, tail) = os.path.split(sys.argv[0])
@@ -333,7 +341,10 @@ class install_scripts(_install_scripts):
                     # log.info("changing mode of %s", file)
                     pass
                 else:
-                    mode = ((os.stat(file)[stat.ST_MODE]) | 0555) & 07777
+                    # Use symbolic versions of permissions so this script doesn't fail to parse under python3.x
+                    exec_and_read_permission = stat.S_IXOTH | stat.S_IXUSR | stat.S_IXGRP | stat.S_IROTH | stat.S_IRUSR | stat.S_IRGRP
+                    mode_mask = 4095 # Octal 07777 used because python3 has different octal syntax than python 2
+                    mode = ((os.stat(file)[stat.ST_MODE]) | exec_and_read_permission) & mode_mask
                     # log.info("changing mode of %s to %o", file, mode)
                     os.chmod(file, mode)
         # --- /distutils copy/paste ---
@@ -397,11 +408,81 @@ arguments = {
                           "SCons.Scanner",
                           "SCons.Script",
                           "SCons.Tool",
+                          "SCons.Tool.docbook",
                           "SCons.Tool.MSCommon",
                           "SCons.Tool.packaging",
                           "SCons.Variables",
                          ],
-    'package_dir'      : {'' : 'engine'},
+    'package_dir'      : {'' : 'engine',
+                          'SCons.Tool.docbook' : 'engine/SCons/Tool/docbook'},
+    'package_data'     : {'SCons.Tool.docbook' : ['docbook-xsl-1.76.1/*',
+                                                  'docbook-xsl-1.76.1/common/*',
+                                                  'docbook-xsl-1.76.1/docsrc/*',
+                                                  'docbook-xsl-1.76.1/eclipse/*',
+                                                  'docbook-xsl-1.76.1/epub/*',
+                                                  'docbook-xsl-1.76.1/epub/bin/*',
+                                                  'docbook-xsl-1.76.1/epub/bin/lib/*',
+                                                  'docbook-xsl-1.76.1/epub/bin/xslt/*',
+                                                  'docbook-xsl-1.76.1/extensions/*',
+                                                  'docbook-xsl-1.76.1/fo/*',
+                                                  'docbook-xsl-1.76.1/highlighting/*',
+                                                  'docbook-xsl-1.76.1/html/*',
+                                                  'docbook-xsl-1.76.1/htmlhelp/*',
+                                                  'docbook-xsl-1.76.1/images/*',
+                                                  'docbook-xsl-1.76.1/images/callouts/*',
+                                                  'docbook-xsl-1.76.1/images/colorsvg/*',
+                                                  'docbook-xsl-1.76.1/javahelp/*',
+                                                  'docbook-xsl-1.76.1/lib/*',
+                                                  'docbook-xsl-1.76.1/manpages/*',
+                                                  'docbook-xsl-1.76.1/params/*',
+                                                  'docbook-xsl-1.76.1/profiling/*',
+                                                  'docbook-xsl-1.76.1/roundtrip/*',
+                                                  'docbook-xsl-1.76.1/slides/browser/*',
+                                                  'docbook-xsl-1.76.1/slides/fo/*',
+                                                  'docbook-xsl-1.76.1/slides/graphics/*',
+                                                  'docbook-xsl-1.76.1/slides/graphics/active/*',
+                                                  'docbook-xsl-1.76.1/slides/graphics/inactive/*',
+                                                  'docbook-xsl-1.76.1/slides/graphics/toc/*',
+                                                  'docbook-xsl-1.76.1/slides/html/*',
+                                                  'docbook-xsl-1.76.1/slides/htmlhelp/*',
+                                                  'docbook-xsl-1.76.1/slides/keynote/*',
+                                                  'docbook-xsl-1.76.1/slides/keynote/xsltsl/*',
+                                                  'docbook-xsl-1.76.1/slides/svg/*',
+                                                  'docbook-xsl-1.76.1/slides/xhtml/*',
+                                                  'docbook-xsl-1.76.1/template/*',
+                                                  'docbook-xsl-1.76.1/tests/*',
+                                                  'docbook-xsl-1.76.1/tools/bin/*',
+                                                  'docbook-xsl-1.76.1/tools/make/*',
+                                                  'docbook-xsl-1.76.1/webhelp/*',
+                                                  'docbook-xsl-1.76.1/webhelp/docs/*',
+                                                  'docbook-xsl-1.76.1/webhelp/docs/common/*',
+                                                  'docbook-xsl-1.76.1/webhelp/docs/common/css/*',
+                                                  'docbook-xsl-1.76.1/webhelp/docs/common/images/*',
+                                                  'docbook-xsl-1.76.1/webhelp/docs/common/jquery/*',
+                                                  'docbook-xsl-1.76.1/webhelp/docs/common/jquery/theme-redmond/*',
+                                                  'docbook-xsl-1.76.1/webhelp/docs/common/jquery/theme-redmond/images/*',
+                                                  'docbook-xsl-1.76.1/webhelp/docs/common/jquery/treeview/*',
+                                                  'docbook-xsl-1.76.1/webhelp/docs/common/jquery/treeview/images/*',
+                                                  'docbook-xsl-1.76.1/webhelp/docs/content/*',
+                                                  'docbook-xsl-1.76.1/webhelp/docs/content/search/*',
+                                                  'docbook-xsl-1.76.1/webhelp/docs/content/search/stemmers/*',
+                                                  'docbook-xsl-1.76.1/webhelp/docsrc/*',
+                                                  'docbook-xsl-1.76.1/webhelp/template/*',
+                                                  'docbook-xsl-1.76.1/webhelp/template/common/*',
+                                                  'docbook-xsl-1.76.1/webhelp/template/common/css/*',
+                                                  'docbook-xsl-1.76.1/webhelp/template/common/images/*',
+                                                  'docbook-xsl-1.76.1/webhelp/template/common/jquery/*',
+                                                  'docbook-xsl-1.76.1/webhelp/template/common/jquery/theme-redmond/*',
+                                                  'docbook-xsl-1.76.1/webhelp/template/common/jquery/theme-redmond/images/*',
+                                                  'docbook-xsl-1.76.1/webhelp/template/common/jquery/treeview/*',
+                                                  'docbook-xsl-1.76.1/webhelp/template/common/jquery/treeview/images/*',
+                                                  'docbook-xsl-1.76.1/webhelp/template/content/search/*',
+                                                  'docbook-xsl-1.76.1/webhelp/template/content/search/stemmers/*',
+                                                  'docbook-xsl-1.76.1/webhelp/xsl/*',
+                                                  'docbook-xsl-1.76.1/website/*',
+                                                  'docbook-xsl-1.76.1/xhtml/*',
+                                                  'docbook-xsl-1.76.1/xhtml-1_1/*',
+                                                  'utils/*']},
     'data_files'       : [('man/man1', man_pages)],
     'scripts'          : scripts,
     'cmdclass'         : {'install'         : install,
@@ -414,7 +495,8 @@ arguments = {
 distutils.core.setup(**arguments)
 
 if Installed:
-    print '\n'.join(Installed)
+    for i in Installed:
+        print(i)
 
 # Local Variables:
 # tab-width:4

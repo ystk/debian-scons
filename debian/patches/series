@@ -1,3 +1,4 @@
 java_ignore_nonexistent_files.patch
 remove_stale_files.patch
 parallel_build.patch
+manpages.patch

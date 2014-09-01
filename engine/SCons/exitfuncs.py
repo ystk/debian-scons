@@ -5,7 +5,7 @@ Register functions which are executed when SCons exits for any reason.
 """
 
 #
-# Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011 The SCons Foundation
+# Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014 The SCons Foundation
 #
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
@@ -27,9 +27,10 @@ Register functions which are executed when SCons exits for any reason.
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
 
-__revision__ = "src/engine/SCons/exitfuncs.py 5357 2011/09/09 21:31:03 bdeegan"
+__revision__ = "src/engine/SCons/exitfuncs.py  2014/03/02 14:18:15 garyo"
 
 
+import atexit
 
 _exithandlers = []
 def _run_exitfuncs():
@@ -52,23 +53,9 @@ def register(func, *targs, **kargs):
     """
     _exithandlers.append((func, targs, kargs))
 
-import sys
 
-try:
-    x = sys.exitfunc
-
-    # if x isn't our own exit func executive, assume it's another
-    # registered exit function - append it to our list...
-    if x != _run_exitfuncs:
-        register(x)
-
-except AttributeError:
-    pass
-
-# make our exit function get run by python when it exits:    
-sys.exitfunc = _run_exitfuncs
-
-del sys
+# make our exit function get run by python when it exits
+atexit.register(_run_exitfuncs)
 
 # Local Variables:
 # tab-width:4

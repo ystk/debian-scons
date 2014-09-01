@@ -1,18 +1,21 @@
-Description:	Check for file/symlink existence before trying to use it in Java()
+Description:	Ignore nonexistent files before trying to use them in Java()
 Origin:		Debian
 Bug-Debian:	http://bugs.debian.org/338232
 Forwarded:	http://scons.tigris.org/issues/show_bug.cgi?id=2207
 
-Index: b/engine/SCons/Tool/javac.py
+Index: scons/engine/SCons/Tool/JavaCommon.py
 ===================================================================
---- a/engine/SCons/Tool/javac.py	2010-01-23 15:11:20.016927869 +0100
-+++ b/engine/SCons/Tool/javac.py	2010-01-23 15:11:33.892932280 +0100
-@@ -90,6 +90,8 @@
-     version = env.get('JAVAVERSION', '1.4')
-     full_tlist = []
-     for f in slist:
-+        if not os.path.exists(f.rfile().get_abspath()):
-+            continue
-         tlist = []
-         source_file_based = True
-         pkg_dir = None
+--- scons.orig/engine/SCons/Tool/JavaCommon.py	2013-03-23 03:19:25.394200546 +0100
++++ scons/engine/SCons/Tool/JavaCommon.py	2013-03-23 03:28:01.158216345 +0100
+@@ -282,7 +282,10 @@
+             return self.outer_state
+ 
+     def parse_java_file(fn, version=default_java_version):
+-        return parse_java(open(fn, 'r').read(), version)
++        try:
++            return parse_java(open(fn, 'r').read(), version)
++        except IOError:
++            return (None, [])
+ 
+     def parse_java(contents, version=default_java_version, trace=None):
+         """Parse a .java file and return a double of package directory,

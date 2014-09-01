@@ -8,7 +8,7 @@ selection method.
 """
 
 #
-# Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011 The SCons Foundation
+# Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014 The SCons Foundation
 #
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
@@ -30,7 +30,7 @@ selection method.
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
 
-__revision__ = "src/engine/SCons/Platform/win32.py 5357 2011/09/09 21:31:03 bdeegan"
+__revision__ = "src/engine/SCons/Platform/win32.py  2014/03/02 14:18:15 garyo"
 
 import os
 import os.path
@@ -64,13 +64,12 @@ else:
 
     _builtin_file = builtins.file
     _builtin_open = builtins.open
-    
-    def _scons_file(*args, **kw):
-        fp = _builtin_file(*args, **kw)
-        win32api.SetHandleInformation(msvcrt.get_osfhandle(fp.fileno()),
-                                      win32con.HANDLE_FLAG_INHERIT,
-                                      0)
-        return fp
+
+    class _scons_file(_builtin_file):
+        def __init__(self, *args, **kw):
+            _builtin_file.__init__(self, *args, **kw)
+            win32api.SetHandleInformation(msvcrt.get_osfhandle(self.fileno()),
+                win32con.HANDLE_FLAG_INHERIT, 0)
 
     def _scons_open(*args, **kw):
         fp = _builtin_open(*args, **kw)
@@ -82,8 +81,39 @@ else:
     builtins.file = _scons_file
     builtins.open = _scons_open
 
-
-
+try:
+    import threading
+    spawn_lock = threading.Lock()
+    
+    # This locked version of spawnve works around a Windows
+    # MSVCRT bug, because its spawnve is not thread-safe.
+    # Without this, python can randomly crash while using -jN.
+    # See the python bug at http://bugs.python.org/issue6476
+    # and SCons issue at
+    # http://scons.tigris.org/issues/show_bug.cgi?id=2449
+    def spawnve(mode, file, args, env):
+        spawn_lock.acquire()
+        try:
+            if mode == os.P_WAIT:
+                ret = os.spawnve(os.P_NOWAIT, file, args, env)
+            else:
+                ret = os.spawnve(mode, file, args, env)
+        finally:
+            spawn_lock.release()
+        if mode == os.P_WAIT:
+            pid, status = os.waitpid(ret, 0)
+            ret = status >> 8
+        return ret
+except ImportError:
+    # Use the unsafe method of spawnve.
+    # Please, don't try to optimize this try-except block
+    # away by assuming that the threading module is always present.
+    # In the test test/option-j.py we intentionally call SCons with
+    # a fake threading.py that raises an import exception right away,
+    # simulating a non-existent package.
+    def spawnve(mode, file, args, env):
+        return os.spawnve(mode, file, args, env)
+    
 # The upshot of all this is that, if you are using Python 1.5.2,
 # you had better have cmd or command.com in your PATH when you run
 # scons.
@@ -124,7 +154,7 @@ def piped_spawn(sh, escape, cmd, args, env, stdout, stderr):
         # actually do the spawn
         try:
             args = [sh, '/C', escape(' '.join(args)) ]
-            ret = os.spawnve(os.P_WAIT, sh, args, env)
+            ret = spawnve(os.P_WAIT, sh, args, env)
         except OSError, e:
             # catch any error
             try:
@@ -152,7 +182,7 @@ def piped_spawn(sh, escape, cmd, args, env, stdout, stderr):
 
 def exec_spawn(l, env):
     try:
-        result = os.spawnve(os.P_WAIT, l[0], l, env)
+        result = spawnve(os.P_WAIT, l[0], l, env)
     except OSError, e:
         try:
             result = exitvalmap[e[0]]
