@@ -11,9 +11,9 @@ it goes here.
 """
 
 unsupported_python_version = (2, 3, 0)
-deprecated_python_version = (2, 4, 0)
+deprecated_python_version = (2, 7, 0)
 
-# Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011 The SCons Foundation
+# Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014 The SCons Foundation
 #
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
@@ -34,7 +34,7 @@ deprecated_python_version = (2, 4, 0)
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-__revision__ = "src/engine/SCons/Script/Main.py 5357 2011/09/09 21:31:03 bdeegan"
+__revision__ = "src/engine/SCons/Script/Main.py  2014/03/02 14:18:15 garyo"
 
 import SCons.compat
 
@@ -79,7 +79,12 @@ def fetch_win32_parallel_msg():
     import SCons.Platform.win32
     return SCons.Platform.win32.parallel_msg
 
-#
+def revert_io():
+    # This call is added to revert stderr and stdout to the original
+    # ones just in case some build rule or something else in the system
+    # has redirected them elsewhere.
+    sys.stderr = sys.__stderr__
+    sys.stdout = sys.__stdout__
 
 class SConsPrintHelpException(Exception):
     pass
@@ -187,7 +192,7 @@ class BuildTask(SCons.Taskmaster.OutOfDateTask):
             finish_time = time.time()
             last_command_end = finish_time
             cumulative_command_time = cumulative_command_time+finish_time-start_time
-            sys.stdout.write("Command execution time: %f seconds\n"%(finish_time-start_time))
+            sys.stdout.write("Command execution time: %s: %f seconds\n"%(str(self.node), finish_time-start_time))
 
     def do_failed(self, status=2):
         _BuildFailures.append(self.exception[1])
@@ -203,7 +208,7 @@ class BuildTask(SCons.Taskmaster.OutOfDateTask):
             SCons.Taskmaster.OutOfDateTask.fail_stop(self)
             exit_status = status
             this_build_status = status
-            
+
     def executed(self):
         t = self.targets[0]
         if self.top and not t.has_builder() and not t.side_effect:
@@ -248,7 +253,7 @@ class BuildTask(SCons.Taskmaster.OutOfDateTask):
             except ValueError:
                 t, e = exc_info
                 tb = None
-                
+
         # Deprecated string exceptions will have their string stored
         # in the first entry of the tuple.
         if e is None:
@@ -266,12 +271,15 @@ class BuildTask(SCons.Taskmaster.OutOfDateTask):
         errfmt = "scons: *** [%s] %s\n"
         sys.stderr.write(errfmt % (nodename, buildError))
 
-        if (buildError.exc_info[2] and buildError.exc_info[1] and 
+        if (buildError.exc_info[2] and buildError.exc_info[1] and
            not isinstance(
-               buildError.exc_info[1], 
+               buildError.exc_info[1],
                (EnvironmentError, SCons.Errors.StopError,
                             SCons.Errors.UserError))):
             type, value, trace = buildError.exc_info
+            if tb and print_stacktrace:
+                sys.stderr.write("scons: internal stack trace:\n")
+                traceback.print_tb(tb, file=sys.stderr)
             traceback.print_exception(type, value, trace)
         elif tb and print_stacktrace:
             sys.stderr.write("scons: internal stack trace:\n")
@@ -546,7 +554,7 @@ def find_deepest_user_frame(tb):
     Input is a "pre-processed" stack trace in the form
     returned by traceback.extract_tb() or traceback.extract_stack()
     """
-    
+
     tb.reverse()
 
     # find the deepest traceback frame that is not part
@@ -559,7 +567,7 @@ def find_deepest_user_frame(tb):
 
 def _scons_user_error(e):
     """Handle user errors. Print out a message and a description of the
-    error, along with the line number and routine where it occured. 
+    error, along with the line number and routine where it occured.
     The file and line number will be the deepest stack frame that is
     not part of SCons itself.
     """
@@ -622,7 +630,7 @@ def _set_debug_values(options):
     debug_values = options.debug
 
     if "count" in debug_values:
-        # All of the object counts are within "if __debug__:" blocks,
+        # All of the object counts are within "if track_instances:" blocks,
         # which get stripped when running optimized (with python -O or
         # from compiled *.pyo files).  Provide a warning if __debug__ is
         # stripped, so it doesn't just look like --debug=count is broken.
@@ -630,6 +638,7 @@ def _set_debug_values(options):
         if __debug__: enable_count = True
         if enable_count:
             count_stats.enable(sys.stdout)
+            SCons.Debug.track_instances = True
         else:
             msg = "--debug=count is not supported when running SCons\n" + \
                   "\twith the python -O option or optimized (.pyo) modules."
@@ -644,6 +653,8 @@ def _set_debug_values(options):
     if "memory" in debug_values:
         memory_stats.enable(sys.stdout)
     print_objects = ("objects" in debug_values)
+    if print_objects:
+        SCons.Debug.track_instances = True
     if "presub" in debug_values:
         SCons.Action.print_actions_presub = 1
     if "stacktrace" in debug_values:
@@ -677,7 +688,7 @@ def _load_site_scons_dir(topdir, site_dir_name=None):
     else:
         site_dir_name = "site_scons"
         err_if_not_found = False
-        
+
     site_dir = os.path.join(topdir, site_dir_name)
     if not os.path.exists(site_dir):
         if err_if_not_found:
@@ -869,7 +880,8 @@ def _main(parser):
                 script_dir = ''
 
     if script_dir and script_dir != os.getcwd():
-        display("scons: Entering directory `%s'" % script_dir)
+        if not options.silent:
+            display("scons: Entering directory `%s'" % script_dir)
         try:
             os.chdir(script_dir)
         except OSError:
@@ -933,7 +945,7 @@ def _main(parser):
         _load_site_scons_dir(d.path, options.site_dir)
     elif not options.no_site_dir:
         _load_all_site_scons_dirs(d.path)
-        
+
     if options.include_dir:
         sys.path = options.include_dir + sys.path
 
@@ -982,9 +994,9 @@ def _main(parser):
         # reading SConscript files and haven't started building
         # things yet, stop regardless of whether they used -i or -k
         # or anything else.
+        revert_io()
         sys.stderr.write("scons: *** %s  Stop.\n" % e)
-        exit_status = 2
-        sys.exit(exit_status)
+        sys.exit(2)
     global sconscript_time
     sconscript_time = time.time() - start_time
 
@@ -1008,10 +1020,11 @@ def _main(parser):
     # warning about deprecated Python versions--delayed until here
     # in case they disabled the warning in the SConscript files.
     if python_version_deprecated():
-        msg = "Support for pre-2.4 Python (%s) is deprecated.\n" + \
+        msg = "Support for pre-%s Python version (%s) is deprecated.\n" + \
               "    If this will cause hardship, contact dev@scons.tigris.org."
+        deprecated_version_string = ".".join(map(str, deprecated_python_version))
         SCons.Warnings.warn(SCons.Warnings.PythonVersionWarning,
-                            msg % python_version_string())
+                            msg % (deprecated_version_string, python_version_string()))
 
     if not options.help:
         SCons.SConf.CreateConfigHBuilder(SCons.Defaults.DefaultEnvironment())
@@ -1061,6 +1074,7 @@ def _main(parser):
     platform = SCons.Platform.platform_module()
 
     if options.interactive:
+        SCons.Node.interactive = True
         SCons.Script.Interactive.interact(fs, OptionsParser, options,
                                           targets, target_top)
 
@@ -1069,6 +1083,8 @@ def _main(parser):
         # Build the targets
         nodes = _build_targets(fs, options, targets, target_top)
         if not nodes:
+            revert_io()
+            print 'Found nothing to build'
             exit_status = 2
 
 def _build_targets(fs, options, targets, target_top):
@@ -1081,12 +1097,14 @@ def _build_targets(fs, options, targets, target_top):
     SCons.Action.print_actions          = not options.silent
     SCons.Action.execute_actions        = not options.no_exec
     SCons.Node.FS.do_store_info         = not options.no_exec
+    SCons.Node.do_store_info            = not options.no_exec
     SCons.SConf.dryrun                  = options.no_exec
 
     if options.diskcheck:
         SCons.Node.FS.set_diskcheck(options.diskcheck)
 
     SCons.CacheDir.cache_enabled = not options.cache_disable
+    SCons.CacheDir.cache_readonly = options.cache_readonly
     SCons.CacheDir.cache_debug = options.cache_debug
     SCons.CacheDir.cache_force = options.cache_force
     SCons.CacheDir.cache_show = options.cache_show
@@ -1132,7 +1150,7 @@ def _build_targets(fs, options, targets, target_top):
                         # x doesn't have a cwd, so it's either not a target,
                         # or not a file, so go ahead and keep it as a default
                         # target and let the engine sort it out:
-                        return 1                
+                        return 1
                 d = list(filter(check_dir, SCons.Script.DEFAULT_TARGETS))
                 SCons.Script.DEFAULT_TARGETS[:] = d
                 target_top = None
@@ -1296,12 +1314,8 @@ def _exec_main(parser, values):
         prof = Profile()
         try:
             prof.runcall(_main, parser)
-        except SConsPrintHelpException, e:
+        finally:
             prof.dump_stats(options.profile_file)
-            raise e
-        except SystemExit:
-            pass
-        prof.dump_stats(options.profile_file)
     else:
         _main(parser)
 
@@ -1326,10 +1340,10 @@ def main():
     except (ImportError, AttributeError):
         # On Windows there is no scons.py, so there is no
         # __main__.__version__, hence there is no script version.
-        pass 
+        pass
     parts.append(version_string("engine", SCons))
     parts.append(path_string("engine", SCons))
-    parts.append("Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011 The SCons Foundation")
+    parts.append("Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014 The SCons Foundation")
     version = ''.join(parts)
 
     import SConsOptions
@@ -1337,9 +1351,12 @@ def main():
     values = SConsOptions.SConsValues(parser.get_default_values())
 
     OptionsParser = parser
-    
+
     try:
-        _exec_main(parser, values)
+        try:
+            _exec_main(parser, values)
+        finally:
+            revert_io()
     except SystemExit, s:
         if s:
             exit_status = s
@@ -1356,6 +1373,7 @@ def main():
         parser.print_help()
         exit_status = 0
     except SCons.Errors.BuildError, e:
+        print e
         exit_status = e.exitstatus
     except:
         # An exception here is likely a builtin Python exception Python

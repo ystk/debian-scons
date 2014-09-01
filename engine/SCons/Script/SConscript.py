@@ -6,7 +6,7 @@ files.
 """
 
 #
-# Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011 The SCons Foundation
+# Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014 The SCons Foundation
 #
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
@@ -28,7 +28,7 @@ files.
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 from __future__ import division
 
-__revision__ = "src/engine/SCons/Script/SConscript.py 5357 2011/09/09 21:31:03 bdeegan"
+__revision__ = "src/engine/SCons/Script/SConscript.py  2014/03/02 14:18:15 garyo"
 
 import SCons
 import SCons.Action
@@ -473,13 +473,8 @@ class SConsEnvironment(SCons.Environment.Base):
 
     def EnsurePythonVersion(self, major, minor):
         """Exit abnormally if the Python version is not late enough."""
-        try:
-            v_major, v_minor, v_micro, release, serial = sys.version_info
-            python_ver = (v_major, v_minor)
-        except AttributeError:
-            python_ver = self._get_major_minor_revision(sys.version)[:2]
-        if python_ver < (major, minor):
-            v = sys.version.split(" ", 1)[0]
+        if sys.version_info < (major, minor):
+            v = sys.version.split()[0]
             print "Python %d.%d or greater required, but you have Python %s" %(major,minor,v)
             sys.exit(2)
 

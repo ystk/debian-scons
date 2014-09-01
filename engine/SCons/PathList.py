@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011 The SCons Foundation
+# Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014 The SCons Foundation
 #
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
@@ -21,7 +21,7 @@
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
 
-__revision__ = "src/engine/SCons/PathList.py 5357 2011/09/09 21:31:03 bdeegan"
+__revision__ = "src/engine/SCons/PathList.py  2014/03/02 14:18:15 garyo"
 
 __doc__ = """SCons.PathList
 
@@ -131,12 +131,14 @@ class _PathList(object):
                 value = env.subst(value, target=target, source=source,
                                   conv=node_conv)
                 if SCons.Util.is_Sequence(value):
-                    result.extend(value)
-                    continue
-                    
+                    result.extend(SCons.Util.flatten(value))
+                elif value:
+                    result.append(value)
             elif type == TYPE_OBJECT:
                 value = node_conv(value)
-            if value:
+                if value:
+                    result.append(value)
+            elif value:
                 result.append(value)
         return tuple(result)
 

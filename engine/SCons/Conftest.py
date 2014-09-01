@@ -156,7 +156,7 @@ def CheckCC(context):
     too, so that it can test against non working flags.
 
     """
-    context.Display("Checking whether the C compiler works")
+    context.Display("Checking whether the C compiler works... ")
     text = """
 int main()
 {
@@ -176,7 +176,7 @@ def CheckSHCC(context):
     too, so that it can test against non working flags.
 
     """
-    context.Display("Checking whether the (shared) C compiler works")
+    context.Display("Checking whether the (shared) C compiler works... ")
     text = """
 int foo()
 {
@@ -196,7 +196,7 @@ def CheckCXX(context):
     too, so that it can test against non working flags.
 
     """
-    context.Display("Checking whether the C++ compiler works")
+    context.Display("Checking whether the C++ compiler works... ")
     text = """
 int main()
 {
@@ -216,7 +216,7 @@ def CheckSHCXX(context):
     too, so that it can test against non working flags.
 
     """
-    context.Display("Checking whether the (shared) C++ compiler works")
+    context.Display("Checking whether the (shared) C++ compiler works... ")
     text = """
 int main()
 {
@@ -554,7 +554,7 @@ def CheckDeclaration(context, symbol, includes = None, language = None):
 
     lang, suffix, msg = _lang2suffix(language)
     if msg:
-        context.Display("Cannot check for declaration %s: %s\n" % (type_name, msg))
+        context.Display("Cannot check for declaration %s: %s\n" % (symbol, msg))
         return msg
 
     src = includetext + includes 

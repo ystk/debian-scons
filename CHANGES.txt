@@ -4,6 +4,198 @@
 
                             Change Log
 
+RELEASE 2.3.1 - Mon, 02 Mar 2014 13:53:45 -0400
+
+  From Andrew Featherstone:
+    - Added support for EPUB output format to the DocBook tool.
+
+  From Tom Tanner:
+    - Stop leaking file handles to subprocesses by switching to using subprocess
+      always.
+    - Allow multiple options to be specified with --debug=a,b,c
+    - Add support for a readonly cache (--cache-readonly)
+    - Always print stats if requested
+    - Generally try harder to print out a message on build errors
+    - Adds a switch to warn on missing targets
+    - Add Pseudo command to mark targets which should not exist after
+      they are built.
+
+  From Bogdan Tenea:
+    - Check for 8.3 filenames on cygwin as well as win32 to make variant_dir work properly.
+
+  From Alexandre Feblot:
+    - Make sure SharedLibrary depends on all dependent libs (by depending on SHLINKCOM)
+
+  From Stefan Sperling:
+    - Fixed the setup of linker flags for a versioned SharedLibrary
+      under OpenBSD (#2916).
+
+  From Antonio Cavallo:
+    - Improve error if Visual Studio bat file not found.
+
+  From Manuel Francisco Naranjo:
+    - Allow Subst.Literal string objects to be compared with each other,
+      so they work better in AddUnique() and Remove().
+
+  From David Rothenberger:
+    - Added cyglink linker that uses Cygwin naming conventions for
+      shared libraries and automatically generates import libraries.
+
+  From Dirk Baechle:
+    - Update bootstrap.py so it can be used from any dir, to run
+      SCons from a source (non-installed) dir.
+    - Count statistics of instances are now collected only when
+      the --debug=count command-line option is used (#2922).
+    - Added release_target_info() to File nodes, which helps to
+      reduce memory consumption in clean builds and update runs
+      of large projects.
+    - Fixed the handling of long options in the command-line
+      parsing (#2929).
+    - Fixed misspelled variable in intelc.py (#2928).
+
+  From Gary Oberbrunner:
+    - Test harness: fail_test() can now print a message to help debugging.
+
+  From Anatoly Techtonik:
+    - Require rpmbuild when building SCons package.
+    - Print full stack on certain errors, for debugging.
+    - Improve documentation for Textfile builder.
+
+  From William Deegan:
+    - VS2012 & VS2010 Resolve initialization issues by adding path to reg.exe
+      in shell used to run batch files.
+    - MSVC Support fixed defaulting TARGET_ARCH to HOST_ARCH. It should be
+      None if not explicitly set.
+    - MSVC Fixed issue where if more than one Architectures compilers are
+      detected, it would take the last one found, and not the first.
+
+  From Philipp Kraus:
+    - Added optional ZIPROOT to Zip tool.
+
+  From Dirk Baechle:
+    - Replaced old SGML-based documentation toolchain with a more modern
+      approach, that also requires less external dependencies (programs and
+      Python packages). Added a customized Docbook XSD for strict validation of
+      all input XML files.
+
+  From Luca Falavigna:
+    - Fixed spelling errors in MAN pages (#2897).
+
+  From Michael McDougall:
+    - Fixed description of ignore_case for EnumVariable in the
+      MAN page (#2774).
+
+RELEASE 2.3.0 - Mon, 02 Mar 2013 13:22:29 -0400
+
+  From Anatoly Techtonik:
+    - Added ability to run scripts/scons.py directly from source checkout
+    - Hide deprecated --debug={dtree,stree,tree} from --help output
+    - Error messages from option parser now include hints about valid choices
+    - Cleaned up some Python 1.5 and pre-2.3 code, so don't expect SCons
+      to run on anything less than Python 2.4 anymore
+    - Several fixes for runtest.py:
+      * exit with an error if no tests were found
+      * removed --noqmtest option - this behavior is by default
+      * replaced `-o FILE --xml` combination with `--xml FILE`
+      * changed `-o, --output FILE` option to capture stdout/stderr output
+        from runtest.py
+    - Remove os_spawnv_fix.diff patch required to enable parallel builds
+      support prior to Python 2.2
+
+  From Juan Lang:
+    - Fix WiX Tool to use .wixobj rather than .wxiobj for compiler output
+    - Support building with WiX releases after 2.0
+
+  From Alexey Klimkin:
+    - Fix nested LIBPATH expansion by flattening sequences in subst_path.
+
+  From eyan on Bitbucket:
+    - Print target name with command execution time with --debug=time
+
+  From Thomas Berg and Evgeny Podjachev:
+    - Fix subprocess spawning on Windows.  Work around a Windows
+      bug that can crash python occasionally when using -jN. (#2449)
+
+  From Dirk Baechle:
+    - Updated test framework to support dir and file fixtures and
+      added ability to test external (out-of-tree) tools (#2862).
+      See doc in QMTest/test-framework.rst.
+    - Fixed several errors in the test suite (Java paths, MSVS version
+      detection, Tool import), additionally
+      * provided MinGW command-line support for the CXX, AS and
+        Fortran tests,
+      * refactored the detection of the gcc version and the according
+        Fortran startup library,
+      * provided a new module rpmutils.py, wrapping the RPM naming rules
+        for target files and further hardware-dependent info (compatibility,
+        compiler flags, ...),
+      * added new test methods must_exist_one_of() and
+        must_not_exist_any_of() and
+      * removed Aegis support from runtest.py. (#2872)
+
+  From Gary Oberbrunner:
+    - Add -jN support to runtest.py to run tests in parallel
+    - Add MSVC10 and MSVC11 support to get_output low-level bat script runner.
+    - Fix MSVS solution generation for VS11, and fixed tests.
+
+  From Rob Managan:
+    - Updated the TeX builder to support the \newglossary command
+      in LaTeX's glossaries package and the files it creates.
+    - Improve support for new versions of biblatex in the TeX builder
+      so biber is called automatically if biblatex requires it.
+    - Add SHLIBVERSION as an option that tells SharedLibrary to build
+      a versioned shared library and create the required symlinks.
+      Add builder InstallVersionedLib to create the required symlinks
+      installing a versioned shared library.
+
+RELEASE 2.2.0 - Mon, 05 Aug 2012 15:37:48 +0000
+
+  From dubcanada on Bitbucket:
+    - Fix 32-bit Visual Express C++ on 64-bit Windows (generate 32-bit code)
+
+  From Paweł Tomulik:
+    - Added gettext toolset
+    - Fixed FindSourceFiles to find final sources (leaf nodes).
+
+  From Greg Ward:
+    - Allow Node objects in Java path (#2825)
+
+  From Joshua Hughes:
+    - Make Windows not redefine builtin file as un-inheritable (#2857)
+    - Fix WINDOWS_INSERT_DEF on MinGW (Windows) (#2856)
+
+  From smallbub on Bitbucket:
+    - Fix LINKCOMSTR, SHLINKCOMSTR, and LDMODULECOMSTR on Windows (#2833).
+
+  From Mortoray:
+    - Make -s (silent mode) be silent about entering subdirs (#2976).
+    - Fix cloning of builders when cloning environment (#2821).
+
+  From Gary Oberbrunner:
+    - Show valid Visual Studio architectures in error message
+       when user passes invalid arch.
+
+  From Alexey Petruchik:
+    - Support for Microsoft Visual Studio 11 (both using it
+      and generating MSVS11 solution files).
+
+  From Alexey Klimkin:
+    - Fixed the Taskmaster, curing spurious build failures in
+      multi-threaded runs (#2720).
+
+  From Dirk Baechle:
+    - Improved documentation of command-line variables (#2809).
+    - Fixed scons-doc.py to properly convert main XML files (#2812).
+
+  From Rob Managan:
+    - Updated the TeX builder to support LaTeX's multibib package.
+    - Updated the TeX builder to support LaTeX's biblatex package.
+    - Added support for using biber instead of bibtex by setting
+      env['BIBTEX'] = 'biber'
+
+  From Arve Knudsen:
+    - Test for FORTRANPPFILESUFFIXES (#2129).
+
 
 RELEASE 2.1.0 - Mon, 09 Sep 2011 20:54:57 -0700
 
@@ -44,18 +236,18 @@ RELEASE 2.1.0 - Mon, 09 Sep 2011 20:54:57 -0700
     - Fix Intel compiler to sort versions >9 correctly (esp. on Linux)
     - Fix Install() when the source and target are directories and the
       target directory exists.
-    
+
   From David Garcia Garzon:
     - Fix Delete to be able to delete broken symlinks and dir
       symlinks.
-  
-  From Robert Lehr:
+
+  From Imran Fanaswala and Robert Lehr:
     - Handle .output file generated by bison/yacc properly. Cleaning it
       when necessary.
 
   From Antoine Dechaume:
     - Handle SWIG file where there is whitespace after the module name
-      properly. Previously the generated files would include 
+      properly. Previously the generated files would include
       the whitespace.
 
   From Dmitry R.:
@@ -78,7 +270,7 @@ RELEASE 2.1.0 - Mon, 09 Sep 2011 20:54:57 -0700
 
   From Evgeny Podjachev and Alexey Petruchick:
 
-    - Support generation of Microsoft Visual Studio 2008 (9.0) 
+    - Support generation of Microsoft Visual Studio 2008 (9.0)
       and 2010 (10.0) project and solution files.
 
   From Ken Deeter:
@@ -180,13 +372,13 @@ RELEASE 2.1.0 - Mon, 09 Sep 2011 20:54:57 -0700
     - The TeX builders should now work with tex files that are generated
       by another program. Thanks to Hans-Martin von Gaudecker for
       isolating the cause of this bug.
-      
+
     - Added support for INDEXSTYLE environment variable so makeindex can
       find style files.
 
     - Added support for the bibunits package so we call bibtex on all
       the bu*.aux files.
-      
+
     - Add support of finding path information on OSX for TeX applications
       MacPorts and Fink paths need to be added by the user
 
@@ -270,7 +462,7 @@ RELEASE 2.0.0.final.0 - Mon, 14 Jun 2010 22:01:37 -0700
     - Fix "Ignoring corrupt sconsign entry" warnings when building
       in a tree with a pre-2.0 .sconsign file.
 
-    - Fix propagation from environment of VS*COMNTOOLS to resolve issues 
+    - Fix propagation from environment of VS*COMNTOOLS to resolve issues
       initializing MSVC/MSVS/SDK issues.
 
     - Handle detecting Visual C++ on Python verions with upper-case
@@ -1669,6 +1861,9 @@ RELEASE 0.97.0d20070809 - Fri, 10 Aug 2007 10:51:27 -0500
 
   - Add a new AddOption() function to support user-defined command-
     line flags (like --prefix=, --force, etc.).
+
+  - Replace modified Optik version with new optparse compatibility module
+    for command line processing in Scripts/SConsOptions.py
 
   - Push and retrieve built symlinks to/from a CacheDir() as actual
     symlinks, not by copying the file contents.
@@ -5537,5 +5732,7 @@ A brief overview of important functionality available in release 0.01:
 
   - Windows installer available.
 
-Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011 The SCons Foundation
-src/CHANGES.txt 5357 2011/09/09 21:31:03 bdeegan
+
+
+Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014 The SCons Foundation
+src/CHANGES.txt  2014/03/02 14:18:15 garyo

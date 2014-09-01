@@ -3,7 +3,7 @@
 Various utility functions go here.
 """
 #
-# Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011 The SCons Foundation
+# Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014 The SCons Foundation
 #
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
@@ -24,7 +24,7 @@ Various utility functions go here.
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-__revision__ = "src/engine/SCons/Util.py 5357 2011/09/09 21:31:03 bdeegan"
+__revision__ = "src/engine/SCons/Util.py  2014/03/02 14:18:15 garyo"
 
 import os
 import sys
@@ -430,15 +430,15 @@ def to_String_for_signature(obj, to_String_for_subst=to_String_for_subst,
 # references to anything else it finds.
 #
 # A special case is any object that has a __semi_deepcopy__() method,
-# which we invoke to create the copy, which is used by the BuilderDict
-# class because of its extra initialization argument.
+# which we invoke to create the copy. Currently only used by
+# BuilderDict to actually prevent the copy operation (as invalid on that object)
 #
 # The dispatch table approach used here is a direct rip-off from the
 # normal Python copy module.
 
 _semi_deepcopy_dispatch = d = {}
 
-def _semi_deepcopy_dict(x):
+def semi_deepcopy_dict(x, exclude = [] ):
     copy = {}
     for key, val in x.items():
         # The regular Python copy.deepcopy() also deepcopies the key,
@@ -447,9 +447,10 @@ def _semi_deepcopy_dict(x):
         #    copy[semi_deepcopy(key)] = semi_deepcopy(val)
         #
         # Doesn't seem like we need to, but we'll comment it just in case.
-        copy[key] = semi_deepcopy(val)
+        if key not in exclude:
+            copy[key] = semi_deepcopy(val)
     return copy
-d[dict] = _semi_deepcopy_dict
+d[dict] = semi_deepcopy_dict
 
 def _semi_deepcopy_list(x):
     return list(map(semi_deepcopy, x))
@@ -467,12 +468,11 @@ def semi_deepcopy(x):
         if hasattr(x, '__semi_deepcopy__') and callable(x.__semi_deepcopy__):
             return x.__semi_deepcopy__()
         elif isinstance(x, UserDict):
-            return x.__class__(_semi_deepcopy_dict(x))
+            return x.__class__(semi_deepcopy_dict(x))
         elif isinstance(x, UserList):
             return x.__class__(_semi_deepcopy_list(x))
         
         return x
-
 
 
 class Proxy(object):

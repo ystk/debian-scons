@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011 The SCons Foundation
+# Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014 The SCons Foundation
 #
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
@@ -21,7 +21,7 @@
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
 
-__revision__ = "src/engine/SCons/Script/SConsOptions.py 5357 2011/09/09 21:31:03 bdeegan"
+__revision__ = "src/engine/SCons/Script/SConsOptions.py  2014/03/02 14:18:15 garyo"
 
 import optparse
 import re
@@ -248,7 +248,7 @@ class SConsOption(optparse.Option):
 class SConsOptionGroup(optparse.OptionGroup):
     """
     A subclass for SCons-specific option groups.
-    
+
     The only difference between this and the base class is that we print
     the group's help text flush left, underneath their own title but
     lined up with the normal "SCons Options".
@@ -268,8 +268,9 @@ class SConsOptionParser(optparse.OptionParser):
     preserve_unknown_options = False
 
     def error(self, msg):
+        # overriden OptionValueError exception handler
         self.print_usage(sys.stderr)
-        sys.stderr.write("SCons error: %s\n" % msg)
+        sys.stderr.write("SCons Error: %s\n" % msg)
         sys.exit(2)
 
     def _process_long_opt(self, rargs, values):
@@ -336,10 +337,75 @@ class SConsOptionParser(optparse.OptionParser):
 
         option.process(opt, value, values, self)
 
+    def reparse_local_options(self):
+        """
+        Re-parse the leftover command-line options stored
+        in self.largs, so that any value overridden on the
+        command line is immediately available if the user turns
+        around and does a GetOption() right away.
+        
+        We mimic the processing of the single args
+        in the original OptionParser._process_args(), but here we
+        allow exact matches for long-opts only (no partial
+        argument names!).
+
+        Else, this would lead to problems in add_local_option()
+        below. When called from there, we try to reparse the
+        command-line arguments that
+          1. haven't been processed so far (self.largs), but
+          2. are possibly not added to the list of options yet.
+          
+        So, when we only have a value for "--myargument" yet,
+        a command-line argument of "--myarg=test" would set it.
+        Responsible for this behaviour is the method
+        _match_long_opt(), which allows for partial matches of
+        the option name, as long as the common prefix appears to
+        be unique.
+        This would lead to further confusion, because we might want
+        to add another option "--myarg" later on (see issue #2929).
+        
+        """
+        rargs = []
+        largs_restore = []
+        # Loop over all remaining arguments
+        skip = False
+        for l in self.largs:
+            if skip:
+                # Accept all remaining arguments as they are
+                largs_restore.append(l)
+            else:
+                if len(l) > 2 and l[0:2] == "--":
+                    # Check long option
+                    lopt = (l,)
+                    if "=" in l:
+                        # Split into option and value
+                        lopt = l.split("=", 1)
+                        
+                    if lopt[0] in self._long_opt:
+                        # Argument is already known
+                        rargs.append('='.join(lopt))
+                    else:
+                        # Not known yet, so reject for now
+                        largs_restore.append('='.join(lopt))
+                else:
+                    if l == "--" or l == "-":
+                        # Stop normal processing and don't
+                        # process the rest of the command-line opts
+                        largs_restore.append(l)
+                        skip = True
+                    else:
+                        rargs.append(l)
+        
+        # Parse the filtered list
+        self.parse_args(rargs, self.values)
+        # Restore the list of remaining arguments for the
+        # next call of AddOption/add_local_option...
+        self.largs = self.largs + largs_restore
+
     def add_local_option(self, *args, **kw):
         """
         Adds a local option to the parser.
-        
+
         This is initiated by a SetOption() call to add a user-defined
         command-line option.  We add the option to a separate option
         group for the local options, creating the group if necessary.
@@ -363,7 +429,7 @@ class SConsOptionParser(optparse.OptionParser):
             # available if the user turns around and does a GetOption()
             # right away.
             setattr(self.values.__defaults__, result.dest, result.default)
-            self.parse_args(self.largs, self.values)
+            self.reparse_local_options()
 
         return result
 
@@ -393,11 +459,11 @@ class SConsIndentedHelpFormatter(optparse.IndentedHelpFormatter):
         out liking:
 
         --  add our own regular expression that doesn't break on hyphens
-            (so things like --no-print-directory don't get broken); 
+            (so things like --no-print-directory don't get broken);
 
         --  wrap the list of options themselves when it's too long
             (the wrapper.fill(opts) call below);
- 
+
         --  set the subsequent_indent when wrapping the help_text.
         """
         # The help for each option consists of two parts:
@@ -563,19 +629,30 @@ def Parser(version):
                   action="store_true",
                   help="Copy already-built targets into the CacheDir.")
 
+    op.add_option('--cache-readonly',
+                  dest='cache_readonly', default=False,
+                  action="store_true",
+                  help="Do not update CacheDir with built targets.")
+
     op.add_option('--cache-show',
                   dest='cache_show', default=False,
                   action="store_true",
                   help="Print build actions for files from CacheDir.")
 
+    def opt_invalid(group, value, options):
+        errmsg  = "`%s' is not a valid %s option type, try:\n" % (value, group)
+        return errmsg + "    %s" % ", ".join(options)
+
     config_options = ["auto", "force" ,"cache"]
 
     def opt_config(option, opt, value, parser, c_options=config_options):
         if not value in c_options:
-            raise OptionValueError("Warning:  %s is not a valid config type" % value)
+            raise OptionValueError(opt_invalid('config', value, c_options))
         setattr(parser.values, option.dest, value)
+
     opt_config_help = "Controls Configure subsystem: %s." \
                       % ", ".join(config_options)
+
     op.add_option('--config',
                   nargs=1, type="string",
                   dest="config", default="auto",
@@ -599,14 +676,16 @@ def Parser(version):
     debug_options = ["count", "duplicate", "explain", "findlibs",
                      "includes", "memoizer", "memory", "objects",
                      "pdb", "prepare", "presub", "stacktrace",
-                     "time"] + list(deprecated_debug_options.keys())
+                     "time"]
 
-    def opt_debug(option, opt, value, parser,
+    def opt_debug(option, opt, value__, parser,
                   debug_options=debug_options,
                   deprecated_debug_options=deprecated_debug_options):
-        if value in debug_options:
-            parser.values.debug.append(value)
-            if value in deprecated_debug_options.keys():
+        for value in value__.split(','):
+            if value in debug_options:
+                parser.values.debug.append(value)
+            elif value in deprecated_debug_options.keys():
+                parser.values.debug.append(value)
                 try:
                     parser.values.delayed_warnings
                 except AttributeError:
@@ -615,8 +694,9 @@ def Parser(version):
                 w = "The --debug=%s option is deprecated%s." % (value, msg)
                 t = (SCons.Warnings.DeprecatedDebugOptionsWarning, w)
                 parser.values.delayed_warnings.append(t)
-        else:
-            raise OptionValueError("Warning:  %s is not a valid debug type" % value)
+            else:
+                raise OptionValueError(opt_invalid('debug', value, debug_options))
+
     opt_debug_help = "Print various types of debugging information: %s." \
                      % ", ".join(debug_options)
     op.add_option('--debug',
@@ -630,7 +710,7 @@ def Parser(version):
         try:
             diskcheck_value = diskcheck_convert(value)
         except ValueError, e:
-            raise OptionValueError("Warning: `%s' is not a valid diskcheck type" % e)
+            raise OptionValueError("`%s' is not a valid diskcheck type" % e)
         setattr(parser.values, option.dest, diskcheck_value)
 
     op.add_option('--diskcheck',
@@ -642,7 +722,8 @@ def Parser(version):
 
     def opt_duplicate(option, opt, value, parser):
         if not value in SCons.Node.FS.Valid_Duplicates:
-            raise OptionValueError("`%s' is not a valid duplication style." % value)
+            raise OptionValueError(opt_invalid('duplication', value,
+                                              SCons.Node.FS.Valid_Duplicates))
         setattr(parser.values, option.dest, value)
         # Set the duplicate style right away so it can affect linking
         # of SConscript files.
@@ -807,7 +888,7 @@ def Parser(version):
             elif o == 'status':
                 tp.status = True
             else:
-                raise OptionValueError("Warning:  %s is not a valid --tree option" % o)
+                raise OptionValueError(opt_invalid('--tree', o, tree_options))
         parser.values.tree_printers.append(tp)
 
     opt_tree_help = "Print a dependency tree in various formats: %s." \

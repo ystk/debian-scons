@@ -58,6 +58,7 @@ engine/SCons/Tool/386asm.py
 engine/SCons/Tool/BitKeeper.py
 engine/SCons/Tool/CVS.py
 engine/SCons/Tool/FortranCommon.py
+engine/SCons/Tool/GettextCommon.py
 engine/SCons/Tool/JavaCommon.py
 engine/SCons/Tool/MSCommon/__init__.py
 engine/SCons/Tool/MSCommon/arch.py
@@ -83,8 +84,10 @@ engine/SCons/Tool/bcc32.py
 engine/SCons/Tool/c++.py
 engine/SCons/Tool/cc.py
 engine/SCons/Tool/cvf.py
+engine/SCons/Tool/cyglink.py
 engine/SCons/Tool/default.py
 engine/SCons/Tool/dmd.py
+engine/SCons/Tool/docbook/__init__.py
 engine/SCons/Tool/dvi.py
 engine/SCons/Tool/dvipdf.py
 engine/SCons/Tool/dvips.py
@@ -98,6 +101,7 @@ engine/SCons/Tool/g++.py
 engine/SCons/Tool/g77.py
 engine/SCons/Tool/gas.py
 engine/SCons/Tool/gcc.py
+engine/SCons/Tool/gettext.py
 engine/SCons/Tool/gfortran.py
 engine/SCons/Tool/gnulink.py
 engine/SCons/Tool/gs.py
@@ -124,6 +128,9 @@ engine/SCons/Tool/m4.py
 engine/SCons/Tool/masm.py
 engine/SCons/Tool/midl.py
 engine/SCons/Tool/mingw.py
+engine/SCons/Tool/msgfmt.py
+engine/SCons/Tool/msginit.py
+engine/SCons/Tool/msgmerge.py
 engine/SCons/Tool/mslib.py
 engine/SCons/Tool/mslink.py
 engine/SCons/Tool/mssdk.py
@@ -149,6 +156,7 @@ engine/SCons/Tool/qt.py
 engine/SCons/Tool/rmic.py
 engine/SCons/Tool/rpcgen.py
 engine/SCons/Tool/rpm.py
+engine/SCons/Tool/rpmutils.py
 engine/SCons/Tool/sgiar.py
 engine/SCons/Tool/sgic++.py
 engine/SCons/Tool/sgicc.py
@@ -166,6 +174,7 @@ engine/SCons/Tool/tex.py
 engine/SCons/Tool/textfile.py
 engine/SCons/Tool/tlib.py
 engine/SCons/Tool/wix.py
+engine/SCons/Tool/xgettext.py
 engine/SCons/Tool/yacc.py
 engine/SCons/Tool/zip.py
 engine/SCons/Util.py
@@ -188,7 +197,6 @@ engine/SCons/compat/_scons_subprocess.py
 engine/SCons/cpp.py
 engine/SCons/dblite.py
 engine/SCons/exitfuncs.py
-os_spawnv_fix.diff
 scons-time.1
 scons.1
 sconsign.1
