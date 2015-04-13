@@ -1,3 +1,15 @@
+scons (2.3.1-2) unstable; urgency=medium
+
+  * New maintainer (Closes: #755496).
+  * debian/control:
+    - Set myself as maintainer.
+    - Set László Böszörményi as co-maintainer.
+  * Add debian/patch/scons-isystem.patch (Closes: #760804, #761565)
+    - add -isystem support to scons
+      Thanks to James McCoy <jamessan@debian.org>!
+
+ -- Jörg Frings-Fürst <debian@jff-webhosting.net>  Sat, 08 Nov 2014 10:40:32 +0100
+
 scons (2.3.1-1) unstable; urgency=medium
 
   * New upstream release.

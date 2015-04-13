@@ -1,0 +1,42 @@
+Description: add -isystem support to scons
+ Backport from 2.3.4-1
+Author: James McCoy <jamessan@debian.org>
+Bug-Debian: https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=760804
+            https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=761565
+Forwarded: https://bitbucket.org/scons/scons/pull-request/184/support-isystem-in-parseflags/diff
+Last-Update: 2014-11-08
+Index: 2.3.1-2/scons.1
+===================================================================
+--- 2.3.1-2.orig/scons.1
++++ 2.3.1-2/scons.1
+@@ -6403,6 +6403,7 @@ and added to the following construction
+ -framework          FRAMEWORKS
+ -frameworkdir=      FRAMEWORKPATH
+ -include            CCFLAGS
++-isystem            CPPFLAGS
+ -isysroot           CCFLAGS, LINKFLAGS
+ -I                  CPPPATH
+ -l                  LIBS
+Index: 2.3.1-2/engine/SCons/Environment.py
+===================================================================
+--- 2.3.1-2.orig/engine/SCons/Environment.py
++++ 2.3.1-2/engine/SCons/Environment.py
+@@ -719,6 +719,9 @@ class SubstitutionEnvironment(object):
+                        t = ('-isysroot', arg)
+                        dict['CCFLAGS'].append(t)
+                        dict['LINKFLAGS'].append(t)
++                   elif append_next_arg_to == '-isystem':
++                       t = ('-isystem', arg)
++                       dict['CCFLAGS'].append(t)
+                    elif append_next_arg_to == '-arch':
+                        t = ('-arch', arg)
+                        dict['CCFLAGS'].append(t)
+@@ -791,7 +794,7 @@ class SubstitutionEnvironment(object):
+                 elif arg[0] == '+':
+                     dict['CCFLAGS'].append(arg)
+                     dict['LINKFLAGS'].append(arg)
+-                elif arg in ['-include', '-isysroot', '-arch']:
++                elif arg in ['-include', '-isysroot', '-isystem', '-arch']:
+                     append_next_arg_to = arg
+                 else:
+                     dict['CCFLAGS'].append(arg)
